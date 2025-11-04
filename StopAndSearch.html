@@ -1,0 +1,250 @@
+<!-- 30 Day Map Challenge - Day 1: Stop and Search -->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Day 1 - Stop and Search | 30 Day Map Challenge</title>
+        <link rel="stylesheet" href="styles/main.css" />
+        <script src="https://unpkg.com/maplibre-gl@^5.10.0/dist/maplibre-gl.js"></script>
+        <script src=" https://cdn.jsdelivr.net/npm/papaparse@5.5.3/papaparse.min.js "></script>
+        <script defer src="scripts/header.js"></script>
+        <script defer src="scripts/nav.js"></script>
+        <link
+            href="https://unpkg.com/maplibre-gl@^5.10.0/dist/maplibre-gl.css"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div id="header"></div>
+        <div class="layout">
+            <nav id="navbar"></nav>
+            <main>
+                <section id="map-container">
+                    <h2>Day 1 - Points</h2>
+                    <h3>A Year of Stop and Search</h3>
+                    <p>
+                        In the year from July 2024 to August 2025, English and
+                        Welsh police forces used 'stop and search' powers to
+                        stop people
+                        <strong>over 402 thousand times.</strong>
+                    </p>
+                    <p>
+                        This map shows the locations individuals were stopped
+                        without a vehicle search, in that period. Each dot
+                        represents one stop and search.
+                    </p>
+
+                    <div class="map" id="map1"></div>
+                    <div id="legend" class="legend"></div>
+                    <p>
+                        Data from
+                        <a href="https://data.police.uk/data/">Police UK</a>
+                        licensed under the
+                        <a
+                            href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+                        >
+                            Open Government Licence v3.0 </a
+                        >.
+                    </p>
+                    <p>
+                        <strong>Note:</strong> Northern Irish and Scottish
+                        police forces are not included in this dataset. Some
+                        stops are shown in in Northern Ireland and Scotland when
+                        recorded by other police forces.
+                    </p>
+                    <p>The locations of stops shown are approximate.</p>
+                    <p>
+                        Of 402924 stops recorded, 34155 were missing location
+                        information and are excluded from the map
+                    </p>
+                    <script>
+                        var map1 = new maplibregl.Map({
+                            container: 'map1',
+                            style: 'style.json',
+                            center: [-4, 54.5],
+                            zoom: 4.3,
+                        })
+
+                        // Outcome categories and colors
+                        const outcomeCategories = {
+                            Arrest: '#c10001',
+                            'Penalty Notice for Disorder': '#db6100',
+                            'Summons / charged by post': '#86390d',
+                            'Caution (simple or conditional)': '#dbb714',
+                            'Khat or Cannabis warning': '#318e2d',
+                            'Community resolution': '#783182',
+                            'A no further action disposal': '#1b6097',
+                            'Not recorded': '#797979',
+                        }
+
+                        // Add legend UI
+                        function createLegend(counts) {
+                            const legend = document.getElementById('legend')
+                            legend.innerHTML = ''
+                            Object.entries(outcomeCategories).forEach(
+                                ([category, color]) => {
+                                    const count =
+                                        counts && counts[category]
+                                            ? counts[category]
+                                            : '...'
+                                    const item = document.createElement('div')
+                                    item.innerHTML = `
+                                    <input type="checkbox" id="legend-${category}" checked style="margin-right:6px;accent-color:${color};">
+                                    <label for="legend-${category}">${category} <span style="color:#333;">(${count})</span></label>
+                                `
+                                    legend.appendChild(item)
+                                }
+                            )
+                        }
+                        createLegend()
+
+                        map1.on('load', function () {
+                            Papa.parse(
+                                '/PoliceStopAndSearch/combined_data.csv',
+                                {
+                                    download: true,
+                                    header: true,
+                                    complete: function (results) {
+                                        // Group features by outcome
+                                        const grouped = {}
+                                        Object.keys(outcomeCategories).forEach(
+                                            (k) => (grouped[k] = [])
+                                        )
+                                        results.data.forEach(function (row) {
+                                            const outcome = outcomeCategories[
+                                                row.Outcome
+                                            ]
+                                                ? row.Outcome
+                                                : 'Not recorded'
+                                            // Add jitter: up to ±0.0005 degrees (~32m)
+                                            const jitterAmount = 0.0005
+                                            const jitter = () =>
+                                                (Math.random() - 0.5) *
+                                                2 *
+                                                jitterAmount
+                                            const lon =
+                                                parseFloat(row.Longitude) +
+                                                jitter()
+                                            const lat =
+                                                parseFloat(row.Latitude) +
+                                                jitter()
+                                            grouped[outcome].push({
+                                                type: 'Feature',
+                                                geometry: {
+                                                    type: 'Point',
+                                                    coordinates: [lon, lat],
+                                                },
+                                                properties: row,
+                                            })
+                                        })
+
+                                        // Calculate counts for each category
+                                        const counts = {}
+                                        Object.keys(outcomeCategories).forEach(
+                                            (k) =>
+                                                (counts[k] = grouped[k].length)
+                                        )
+
+                                        // Sort categories by number of points descending
+                                        const sortedCategories = Object.entries(
+                                            grouped
+                                        )
+                                            .map(([category, features]) => ({
+                                                category,
+                                                color: outcomeCategories[
+                                                    category
+                                                ],
+                                                features,
+                                            }))
+                                            .sort(
+                                                (a, b) =>
+                                                    b.features.length -
+                                                    a.features.length
+                                            )
+
+                                        // Add a source and layer for each category in sorted order
+                                        sortedCategories.forEach(
+                                            ({ category, color, features }) => {
+                                                map1.addSource(
+                                                    `stops-${category}`,
+                                                    {
+                                                        type: 'geojson',
+                                                        data: {
+                                                            type: 'FeatureCollection',
+                                                            features: features,
+                                                        },
+                                                    }
+                                                )
+                                                map1.addLayer({
+                                                    id: `stops-layer-${category}`,
+                                                    type: 'circle',
+                                                    source: `stops-${category}`,
+                                                    paint: {
+                                                        'circle-radius': [
+                                                            'interpolate',
+                                                            ['linear'],
+                                                            ['zoom'],
+                                                            6,
+                                                            1,
+                                                            14,
+                                                            2,
+                                                            17,
+                                                            4,
+                                                        ],
+                                                        'circle-color': color,
+                                                    },
+                                                    layout:
+                                                        category ===
+                                                        'Not recorded'
+                                                            ? {
+                                                                  visibility:
+                                                                      'none',
+                                                              }
+                                                            : {
+                                                                  visibility:
+                                                                      'visible',
+                                                              },
+                                                })
+                                            }
+                                        )
+
+                                        // Recreate legend with counts
+                                        createLegend(counts)
+
+                                        // Add legend interactivity
+                                        Object.keys(outcomeCategories).forEach(
+                                            (category) => {
+                                                const checkbox =
+                                                    document.getElementById(
+                                                        `legend-${category}`
+                                                    )
+                                                if (
+                                                    category === 'Not recorded'
+                                                ) {
+                                                    checkbox.checked = false
+                                                }
+                                                checkbox.addEventListener(
+                                                    'change',
+                                                    function () {
+                                                        map1.setLayoutProperty(
+                                                            `stops-layer-${category}`,
+                                                            'visibility',
+                                                            this.checked
+                                                                ? 'visible'
+                                                                : 'none'
+                                                        )
+                                                    }
+                                                )
+                                            }
+                                        )
+                                    },
+                                }
+                            )
+                        })
+                    </script>
+                </section>
+            </main>
+        </div>
+    </body>
+</html>
