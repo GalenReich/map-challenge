@@ -16,4 +16,43 @@ fetch('nav_manifest.json')
                 ul.appendChild(li)
             })
         navbar.appendChild(ul)
+
+        // --- Burger menu logic ---
+        // Only add burger menu if not already present
+        if (!document.getElementById('burger-menu')) {
+            const burger = document.createElement('button')
+            burger.id = 'burger-menu'
+            burger.setAttribute('aria-label', 'Open navigation menu')
+            burger.innerHTML = `
+                <span></span>
+                <span></span>
+                <span></span>
+            `
+            document.body.appendChild(burger)
+
+            // Toggle nav visibility
+            burger.addEventListener('click', () => {
+                navbar.classList.toggle('open')
+                document.body.classList.toggle('nav-open')
+            })
+
+            // Close nav when clicking outside or on a link (mobile)
+            navbar.addEventListener('click', (e) => {
+                if (e.target.tagName === 'A') {
+                    navbar.classList.remove('open')
+                    document.body.classList.remove('nav-open')
+                }
+            })
+            document.addEventListener('click', (e) => {
+                if (
+                    window.innerWidth <= 800 &&
+                    navbar.classList.contains('open') &&
+                    !navbar.contains(e.target) &&
+                    e.target !== burger
+                ) {
+                    navbar.classList.remove('open')
+                    document.body.classList.remove('nav-open')
+                }
+            })
+        }
     })

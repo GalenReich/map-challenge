@@ -1,6 +1,6 @@
 body {
     font-family: Arial, sans-serif;
-    margin: 20px;
+    margin: 0;
     padding: 0;
     font-size: normal;
 }
@@ -8,10 +8,31 @@ body {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
+    margin: 20px;
 }
 main {
     max-width: 600px;
     margin: 0;
+    flex: 1;
+}
+header {
+    color: #fff;
+    background: #1b6097;
+    width: 100vw;
+    margin-left: calc(
+        -1 * (100vw - 100%) / 2
+    ); /* Prevent horizontal scrollbars */
+    margin-right: calc(-1 * (100vw - 100%) / 2);
+    padding: 10px 20px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    min-height: 60px;
+}
+header h1 {
+    margin: 0;
+    padding: 0px 0;
+    height: auto;
     flex: 1;
 }
 .map {
@@ -28,8 +49,6 @@ main {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     padding: 10px 16px;
     z-index: 10;
-    min-width: 220px;
-    max-width: 600px;
     display: flex;
     flex-wrap: wrap;
     gap: 0 24px;
@@ -84,4 +103,90 @@ nav a {
 
 nav a:hover {
     background: #e0e6ea;
+}
+
+#burger-menu {
+    display: none;
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 1001;
+    width: 40px;
+    height: 40px;
+    background: #f5f6f7;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 5px;
+}
+
+#burger-menu span {
+    display: block;
+    width: 24px;
+    height: 3px;
+    background: #1b6097;
+    border-radius: 2px;
+    transition: 0.3s;
+}
+
+@media (max-width: 800px) {
+    .layout {
+        flex-direction: column;
+        align-items: stretch;
+        margin: 12px; /* Reduce margin on small screens */
+    }
+    nav {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 80vw;
+        max-width: 320px;
+        height: 100vh;
+        background: #f5f6f7;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+        overflow-y: auto;
+        padding: 32px 0 12px 0;
+        margin: 0;
+        border-radius: 0 8px 8px 0;
+        transition: transform 0.3s;
+        transform: translateX(-100%);
+    }
+    nav.open {
+        display: block;
+        transform: translateX(0);
+    }
+    #burger-menu {
+        display: flex;
+    }
+    main {
+        max-width: 100%;
+    }
+    body.nav-open {
+        overflow: hidden;
+    }
+}
+
+@media (max-width: 424px) {
+    header h1 {
+        font-size: 1.5em;
+    }
+}
+
+@media (max-width: 973px) {
+    nav {
+        width: 200px;
+        padding-left: 0;
+        padding-right: 0;
+    }
+    nav a {
+        font-size: 0.95em;
+        padding: 3px;
+        margin: 0px 4px;
+    }
 }
