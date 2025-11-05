@@ -30,20 +30,28 @@ fetch('nav_manifest.json')
             `
             document.body.appendChild(burger)
 
-            // Toggle nav visibility
-            burger.addEventListener('click', () => {
+            // Use pointerdown for better mobile/touch support
+            burger.addEventListener('pointerdown', (e) => {
+                e.stopPropagation()
                 navbar.classList.toggle('open')
                 document.body.classList.toggle('nav-open')
             })
 
-            // Close nav when clicking outside or on a link (mobile)
+            // Prevent nav clicks from bubbling up (so nav doesn't close when tapping inside)
+            navbar.addEventListener('pointerdown', (e) => {
+                e.stopPropagation()
+            })
+
+            // Close nav when clicking a link (mobile)
             navbar.addEventListener('click', (e) => {
                 if (e.target.tagName === 'A') {
                     navbar.classList.remove('open')
                     document.body.classList.remove('nav-open')
                 }
             })
-            document.addEventListener('click', (e) => {
+
+            // Close nav when clicking outside nav or burger
+            document.addEventListener('pointerdown', (e) => {
                 if (
                     window.innerWidth <= 800 &&
                     navbar.classList.contains('open') &&
