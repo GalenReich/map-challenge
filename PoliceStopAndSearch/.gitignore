@@ -1,5 +1,4 @@
-*.ipynb
-data/
-*.csv
-
+*
+!gitignore
 !combined_data.csv
+!stop_and_search_density.geojson

@@ -1,0 +1,181 @@
+<!-- 30 Day Map Challenge - Day 1: Stop and Search -->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Day 3 - Polygons | 30 Day Map Challenge</title>
+        <link rel="stylesheet" href="styles/main.css" />
+        <script src="https://unpkg.com/maplibre-gl@^5.10.0/dist/maplibre-gl.js"></script>
+        <script src=" https://cdn.jsdelivr.net/npm/papaparse@5.5.3/papaparse.min.js "></script>
+        <script defer src="scripts/header.js"></script>
+        <script defer src="scripts/nav.js"></script>
+        <link
+            href="https://unpkg.com/maplibre-gl@^5.10.0/dist/maplibre-gl.css"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div id="header"></div>
+        <div class="layout">
+            <nav id="navbar"></nav>
+            <main>
+                <section id="map-container">
+                    <h2>Day 3 - Polygons</h2>
+                    <h3>Stop and Search per Capita</h3>
+                    <p>
+                        In the year from July 2024 to August 2025, English and
+                        Welsh police forces used 'stop and search' powers to
+                        stop people
+                        <strong>over 402 thousand times.</strong>
+                    </p>
+                    <p>
+                        This map shows the number of times 'stop and search'
+                        powers were used to stop individuals without a vehicle
+                        search per 1000 population.
+                    </p>
+
+                    <div class="map" id="map3"></div>
+                    <div id="legend" class="legend"></div>
+                    <p>
+                        <strong>Note:</strong> The locations of stops shown are
+                        approximate and may be associated with a neighbouring
+                        LSOA.
+                    </p>
+                    <p>
+                        LSOA boundaries have been simplified to make the file
+                        smaller. Consequently "Bristol 008" has expanded into
+                        the channel and "Cornwall 007" has absconded entirely!
+                    </p>
+                    <p>
+                        Of 402924 stops recorded, 34155 were missing location
+                        information and are excluded.
+                    </p>
+                    <script>
+                        var map3 = new maplibregl.Map({
+                            container: 'map3',
+                            style: 'styles/map/base.json',
+                            center: [-4, 54.5],
+                            zoom: 4.3,
+                        })
+
+                        map3.on('load', function () {
+                            fetch(
+                                'PoliceStopAndSearch/stop_and_search_density.geojson'
+                            )
+                                .then((response) => response.json())
+                                .then((data) => {
+                                    map3.addSource('stop_and_search_density', {
+                                        type: 'geojson',
+                                        data: data,
+                                    })
+                                    // Add fill layer for polygons
+                                    map3.addLayer({
+                                        id: 'stop_and_search_density_fill',
+                                        type: 'fill',
+                                        source: 'stop_and_search_density',
+                                        paint: {
+                                            'fill-color': [
+                                                'case',
+                                                [
+                                                    '==',
+                                                    [
+                                                        'get',
+                                                        'STOPS_PER_1000_POP',
+                                                    ],
+                                                    0,
+                                                ],
+                                                '#000000',
+                                                [
+                                                    'all',
+                                                    [
+                                                        '>',
+                                                        [
+                                                            'get',
+                                                            'STOPS_PER_1000_POP',
+                                                        ],
+                                                        0,
+                                                    ],
+                                                    [
+                                                        '<=',
+                                                        [
+                                                            'get',
+                                                            'STOPS_PER_1000_POP',
+                                                        ],
+                                                        0.001,
+                                                    ],
+                                                ],
+                                                '#50127b',
+                                                [
+                                                    'all',
+                                                    [
+                                                        '>',
+                                                        [
+                                                            'get',
+                                                            'STOPS_PER_1000_POP',
+                                                        ],
+                                                        0.001,
+                                                    ],
+                                                    [
+                                                        '<=',
+                                                        [
+                                                            'get',
+                                                            'STOPS_PER_1000_POP',
+                                                        ],
+                                                        0.003,
+                                                    ],
+                                                ],
+                                                '#b6377a',
+                                                [
+                                                    'all',
+                                                    [
+                                                        '>',
+                                                        [
+                                                            'get',
+                                                            'STOPS_PER_1000_POP',
+                                                        ],
+                                                        0.003,
+                                                    ],
+                                                    [
+                                                        '<=',
+                                                        [
+                                                            'get',
+                                                            'STOPS_PER_1000_POP',
+                                                        ],
+                                                        0.007,
+                                                    ],
+                                                ],
+                                                '#fb8761',
+                                                [
+                                                    '>',
+                                                    [
+                                                        'get',
+                                                        'STOPS_PER_1000_POP',
+                                                    ],
+                                                    0.007,
+                                                ],
+                                                '#fcfdbf',
+                                                '#000000',
+                                            ],
+                                            'fill-opacity': 0.7,
+                                        },
+                                    })
+                                })
+                        })
+
+                        // Add legend
+                        const legend = document.getElementById('legend')
+                        legend.innerHTML = `
+                            <h3>Stop and Searches per 1000 Population</h3>
+                            <div><span style="background:#000000;width:16px;height:16px;display:inline-block;margin-right:6px;border:1px solid #333"></span>0</div>
+                            <div><span style="background:#50127b;width:16px;height:16px;display:inline-block;margin-right:6px;border:1px solid #333"></span>0 - 0.001</div>
+                            <div><span style="background:#b6377a;width:16px;height:16px;display:inline-block;margin-right:6px;border:1px solid #333"></span>0.001 - 0.003</div>
+                            <div><span style="background:#fb8761;width:16px;height:16px;display:inline-block;margin-right:6px;border:1px solid #333"></span>0.003 - 0.007</div>
+                            <div><span style="background:#fcfdbf;width:16px;height:16px;display:inline-block;margin-right:6px;border:1px solid #333"></span>0.007+</div>
+                        `
+                    </script>
+                </section>
+            </main>
+        </div>
+    </body>
+</html>
