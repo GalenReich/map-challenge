@@ -1,0 +1,224 @@
+<!-- 30 Day Map Challenge - Day 1: Stop and Search -->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Day 2 - Lines | 30 Day Map Challenge</title>
+        <link rel="stylesheet" href="styles/main.css" />
+        <script src="https://unpkg.com/maplibre-gl@^5.10.0/dist/maplibre-gl.js"></script>
+        <script src=" https://cdn.jsdelivr.net/npm/papaparse@5.5.3/papaparse.min.js "></script>
+        <script defer src="scripts/header.js"></script>
+        <script defer src="scripts/nav.js"></script>
+        <link
+            href="https://unpkg.com/maplibre-gl@^5.10.0/dist/maplibre-gl.css"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div id="header"></div>
+        <div class="layout">
+            <nav id="navbar"></nav>
+            <main>
+                <section id="map-container">
+                    <h2>Day 2 - Lines</h2>
+                    <h3>UK Rail Infrastructure</h3>
+                    <p>
+                        Rail infrastructure in the UK comes in all shapes and
+                        sizes. This map uses OSM data to show the different
+                        types of railways.
+                    </p>
+
+                    <div class="map" id="map2"></div>
+                    <div id="legend" class="legend"></div>
+                    <script>
+                        var map2 = new maplibregl.Map({
+                            container: 'map2',
+                            style: 'styles/map/base.json',
+                            center: [-4, 54.5],
+                            zoom: 4.3,
+                        })
+
+                        // Railway type groups and colors
+                        const railwayGroups = {
+                            Rail: {
+                                types: ['rail'],
+                                color: '#0072b2',
+                            },
+                            Underground: {
+                                types: ['subway'],
+                                color: '#009e73',
+                            },
+                            'Light Rail/Tram': {
+                                types: ['light_rail', 'tram'],
+                                color: '#56b4e9',
+                            },
+                            'Small Gauge': {
+                                types: [
+                                    'narrow_gauge',
+                                    'funicular',
+                                    'monorail',
+                                    'miniature',
+                                ],
+                                color: '#cc79a7',
+                            },
+                            Historic: {
+                                types: ['historic'],
+                                color: '#e69f00',
+                            },
+                            'Construction/Proposed': {
+                                types: ['construction', 'proposed'],
+                                color: '#f0e442',
+                            },
+                            'Inactive/Abandoned': {
+                                types: [
+                                    'abandoned',
+                                    'razed',
+                                    'disused',
+                                    'disused;abandoned',
+                                    'demolished',
+                                    'dismantled',
+                                ],
+                                color: '#d55e00',
+                            },
+                        }
+                        const defaultRailwayColor = '#888888'
+
+                        // Add legend UI
+                        function createRailwayLegend() {
+                            const legend = document.getElementById('legend')
+                            legend.innerHTML = ''
+                            Object.entries(railwayGroups).forEach(
+                                ([label, group]) => {
+                                    const layerId = `railways-lines-${label.replace(
+                                        /\s+/g,
+                                        '-'
+                                    )}`
+                                    const item = document.createElement('div')
+                                    item.innerHTML = `
+                                    <input type="checkbox" id="legend-${layerId}" checked style="margin-right:6px;accent-color:${group.color};">
+                                    <label for="legend-${layerId}">${label}</label>
+                                `
+                                    legend.appendChild(item)
+                                }
+                            )
+                            // Default
+                            const item = document.createElement('div')
+                            item.innerHTML = `
+                                <input type="checkbox" id="legend-railways-lines-other" checked style="margin-right:6px;accent-color:${defaultRailwayColor};">
+                                <label for="legend-railways-lines-other">other</label>
+                            `
+                            legend.appendChild(item)
+                        }
+                        createRailwayLegend()
+
+                        map2.on('load', function () {
+                            fetch('OSM/railways.geojson')
+                                .then((response) => response.json())
+                                .then((data) => {
+                                    map2.addSource('railways', {
+                                        type: 'geojson',
+                                        data: data,
+                                    })
+
+                                    // For each group, add a layer
+                                    Object.entries(railwayGroups).forEach(
+                                        ([label, group]) => {
+                                            map2.addLayer({
+                                                id: `railways-lines-${label.replace(
+                                                    /\s+/g,
+                                                    '-'
+                                                )}`,
+                                                type: 'line',
+                                                source: 'railways',
+                                                layout: {
+                                                    'line-join': 'round',
+                                                    'line-cap': 'round',
+                                                },
+                                                filter: [
+                                                    'in',
+                                                    ['get', 'railway'],
+                                                    ['literal', group.types],
+                                                ],
+                                                paint: {
+                                                    'line-color': group.color,
+                                                    'line-width': 2,
+                                                },
+                                            })
+                                        }
+                                    )
+                                    // Add a layer for other types (not matched)
+                                    const allTypes = Object.values(
+                                        railwayGroups
+                                    ).flatMap((g) => g.types)
+                                    map2.addLayer({
+                                        id: 'railways-lines-other',
+                                        type: 'line',
+                                        source: 'railways',
+                                        filter: [
+                                            'all',
+                                            [
+                                                '!',
+                                                [
+                                                    'in',
+                                                    ['get', 'railway'],
+                                                    ['literal', allTypes],
+                                                ],
+                                            ],
+                                        ],
+                                        paint: {
+                                            'line-color': defaultRailwayColor,
+                                            'line-width': 2,
+                                        },
+                                    })
+
+                                    // Add legend interactivity
+                                    Object.entries(railwayGroups).forEach(
+                                        ([label, group]) => {
+                                            const layerId = `railways-lines-${label.replace(
+                                                /\s+/g,
+                                                '-'
+                                            )}`
+                                            const checkbox =
+                                                document.getElementById(
+                                                    `legend-${layerId}`
+                                                )
+                                            checkbox.addEventListener(
+                                                'change',
+                                                function () {
+                                                    map2.setLayoutProperty(
+                                                        layerId,
+                                                        'visibility',
+                                                        this.checked
+                                                            ? 'visible'
+                                                            : 'none'
+                                                    )
+                                                }
+                                            )
+                                        }
+                                    )
+                                    // Other layer
+                                    const otherCheckbox =
+                                        document.getElementById(
+                                            'legend-railways-lines-other'
+                                        )
+                                    otherCheckbox.addEventListener(
+                                        'change',
+                                        function () {
+                                            map2.setLayoutProperty(
+                                                'railways-lines-other',
+                                                'visibility',
+                                                this.checked
+                                                    ? 'visible'
+                                                    : 'none'
+                                            )
+                                        }
+                                    )
+                                })
+                        })
+                    </script>
+                </section>
+            </main>
+        </div>
+    </body>
+</html>
