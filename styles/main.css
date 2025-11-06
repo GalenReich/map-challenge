@@ -41,6 +41,18 @@ header h1 {
     box-sizing: border-box;
 }
 
+img {
+    width: 100%;
+}
+.caption {
+    text-align: center;
+    font-style: italic;
+    font-size: 0.9em;
+    margin-top: 4px;
+    margin-bottom: 20px;
+    color: #555;
+}
+
 #legend {
     position: static;
     margin-top: 10px;
