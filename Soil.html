@@ -1,0 +1,131 @@
+<!-- 30 Day Map Challenge - Day 1: Stop and Search -->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Day 5 - Earth | 30 Day Map Challenge</title>
+        <link rel="stylesheet" href="styles/main.css" />
+        <script src="https://unpkg.com/maplibre-gl@^5.10.0/dist/maplibre-gl.js"></script>
+        <script src=" https://cdn.jsdelivr.net/npm/papaparse@5.5.3/papaparse.min.js "></script>
+        <script defer src="scripts/header.js"></script>
+        <script defer src="scripts/nav.js"></script>
+        <link
+            href="https://unpkg.com/maplibre-gl@^5.10.0/dist/maplibre-gl.css"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div id="header"></div>
+        <div class="layout">
+            <nav id="navbar"></nav>
+            <main>
+                <section id="map-container">
+                    <h2>Day 5: Earth</h2>
+                    <h3>UK Soil Observations</h3>
+                    <p>
+                        Crowd-sourced soil observations from the UK Soil
+                        Observatory. More information about the project is
+                        <a
+                            href="https://www.ukso.org/static-maps/community-soil-property-observations.html"
+                            >available here</a
+                        >.
+                    </p>
+
+                    <p>
+                        Click on a soil observation marker to see the full image
+                        and more details below the map.
+                    </p>
+
+                    <div class="map" id="map5"></div>
+                    <div id="legend" class="block"></div>
+                    <p>
+                        This work is licensed under a Creative Commons
+                        Attribution-NonCommercial 3.0 Unported License.
+                    </p>
+                    <p>Contains UK Soil Observatory materials © 2014.</p>
+                    <script>
+                        var map5 = new maplibregl.Map({
+                            container: 'map5',
+                            style: 'styles/map/soil.json',
+                            center: [-4, 54.5],
+                            zoom: 4.3,
+                        })
+
+                        // Load GeoJSON and add images as icons
+                        fetch('soil/soil_observations.geojson')
+                            .then((response) => response.json())
+                            .then((data) => {
+                                // Store marker elements for resizing
+                                const markers = []
+                                data.features.forEach((feature) => {
+                                    const soilType =
+                                        feature.properties.SOIL_TYPE_TRANS
+                                    // inject lo folder after soil/
+                                    const image_url_lo =
+                                        feature.properties.IMAGE_URL.replace(
+                                            '/soil/',
+                                            '/soil/lo/'
+                                        )
+                                    const image_url_hi =
+                                        feature.properties.IMAGE_URL.replace(
+                                            '/soil/',
+                                            '/soil/hi/'
+                                        )
+                                    const el = document.createElement('div')
+                                    el.className = 'marker '
+                                    el.style.backgroundImage = `url('${image_url_lo}')`
+                                    el.style.width = '30px'
+                                    el.style.height = '30px'
+                                    el.style.backgroundSize = 'cover'
+                                    // Create marker without popup
+                                    const marker = new maplibregl.Marker({
+                                        element: el,
+                                    })
+                                        .setLngLat(feature.geometry.coordinates)
+                                        .addTo(map5)
+                                    markers.push(el)
+                                    // On marker click, show info in legend
+                                    el.addEventListener('click', function (e) {
+                                        e.stopPropagation()
+                                        const legend =
+                                            document.getElementById('legend')
+                                        legend.innerHTML = `<h3>${soilType}</h3>
+                                            <p><strong>Date Entered</strong></p><p>${feature.properties.DATE_ENTERED}</p>
+                                            <p><strong>Description</strong></p><p>${feature.properties.DESCRIPTION}</p>
+                                            <p><strong>Soil Acidity</strong></p><p>${feature.properties.SOIL_ACIDITY_DESC}</p>
+                                            <p><strong>Soil Type</strong></p><p>${feature.properties.SOIL_TYPE_DESC}</p>
+                                            <img src="${image_url_hi}" alt="Crowdsourced soil" style="max-width:100%; height:auto;" />
+                                            `
+                                    })
+                                })
+
+                                // Function to resize markers based on zoom
+                                function resizeMarkers() {
+                                    const zoom = map5.getZoom()
+                                    // Marker size:
+                                    // zoom <8 = 25px
+                                    // zoom 8-10 = interpolate 25-100px
+                                    // zoom >10 = 100px
+
+                                    const size =
+                                        zoom < 7
+                                            ? 25
+                                            : zoom > 13
+                                            ? 300
+                                            : 25 + ((zoom - 7) / 6) * (300 - 25)
+                                    markers.forEach((el) => {
+                                        el.style.width = `${size}px`
+                                        el.style.height = `${size}px`
+                                    })
+                                }
+
+                                map5.on('zoom', resizeMarkers)
+                                map5.on('load', resizeMarkers)
+                            })
+                    </script>
+                </section>
+            </main>
+        </div>
+    </body>
+</html>

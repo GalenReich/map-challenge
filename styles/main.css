@@ -67,6 +67,9 @@ img {
     font-weight: bold;
     font-size: small;
 }
+#legend.block {
+    display: block !important;
+}
 
 #legend > div {
     display: flex;
@@ -143,6 +146,14 @@ nav a:hover {
     background: #1b6097;
     border-radius: 2px;
     transition: 0.3s;
+}
+
+.marker {
+    display: block;
+    border: 2px solid #fff7ea;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
 }
 
 @media (max-width: 800px) {
