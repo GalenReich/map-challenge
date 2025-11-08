@@ -1,0 +1,587 @@
+<!-- 30 Day Map Challenge - Day 1: Stop and Search -->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Day 5 - Earth | 30 Day Map Challenge</title>
+        <link rel="stylesheet" href="styles/main.css" />
+        <script src="https://unpkg.com/maplibre-gl@^5.10.0/dist/maplibre-gl.js"></script>
+        <script src=" https://cdn.jsdelivr.net/npm/papaparse@5.5.3/papaparse.min.js "></script>
+        <script defer src="scripts/header.js"></script>
+        <script defer src="scripts/nav.js"></script>
+        <link
+            href="https://unpkg.com/maplibre-gl@^5.10.0/dist/maplibre-gl.css"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div id="header"></div>
+        <div class="layout">
+            <nav id="navbar"></nav>
+            <main>
+                <section id="map-container">
+                    <h2>Day 6: Dimensions</h2>
+                    <h3>Flat Earth</h3>
+                    <p>
+                        Inspired by 'The Planiverse' by A. K. Dewdney (and in
+                        turn by Edwin A. Abbott's novella 'Flatland: A Romance
+                        of Many Dimensions') this map explores the Earth as
+                        flattened onto a circular world.
+                    </p>
+
+                    <p>
+                        Cities appear at the nearest point on the circular map,
+                        creating a unique perspective on global geography.
+                    </p>
+
+                    <div class="flatland-map-wrapper">
+                        <div class="map" id="map6" style="opacity: 0"></div>
+                        <canvas id="flatland-circle"></canvas>
+                    </div>
+                    <div style="text-align: center; margin: 12px 0">
+                        <button id="toggle-globe">Show Globe</button>
+                        <button id="download-svg">Download Map</button>
+                    </div>
+                    <p class="caption">
+                        <a href="https://maplibre.org/" target="_blank"
+                            >MapLibre</a
+                        >
+                        |
+                        <a href="https://openfreemap.org" target="_blank"
+                            >OpenFreeMap</a
+                        >
+                        <a href="https://www.openmaptiles.org/" target="_blank"
+                            >© OpenMapTiles</a
+                        >
+                        Data from
+                        <a
+                            href="https://www.openstreetmap.org/copyright"
+                            target="_blank"
+                            >OpenStreetMap</a
+                        >
+                    </p>
+                    <p>
+                        With thanks to
+                        <a href="https://gist.github.com/ofou"
+                            >Omar Olivares Urrutia</a
+                        >
+                        for the
+                        <a
+                            href="https://gist.github.com/ofou/df09a6834a8421b4f376c875194915c9"
+                            >list of cities</a
+                        >.
+                    </p>
+
+                    <script>
+                        const map6 = new maplibregl.Map({
+                            container: 'map6',
+                            style: 'styles/map/minimal.json',
+                            zoom: 1.5,
+                            center: [0, 0],
+                            interactive: true,
+                            scrollZoom: false,
+                            touchZoomRotate: false,
+                            attributionControl: false,
+                            dragRotate: false,
+                            boxZoom: false,
+                            keyboard: false,
+                            dragPan: true,
+                        })
+
+                        map6.on('style.load', () => {
+                            map6.setProjection({
+                                type: 'globe', // Set projection to globe
+                            })
+                        })
+
+                        // Draw a circle on the canvas
+                        window.addEventListener('DOMContentLoaded', () => {
+                            const canvas =
+                                document.getElementById('flatland-circle')
+                            const wrapper = document.querySelector(
+                                '.flatland-map-wrapper'
+                            )
+                            // Set canvas size to match wrapper
+                            canvas.width = wrapper.offsetWidth
+                            canvas.height = wrapper.offsetHeight
+                            const ctx = canvas.getContext('2d')
+                            const cx = canvas.width / 2
+                            const cy = canvas.height / 2
+                            const radius =
+                                Math.min(canvas.width, canvas.height) / 2 - 5
+                            ctx.clearRect(0, 0, canvas.width, canvas.height)
+                            ctx.beginPath()
+                            ctx.arc(cx, cy, radius, 0, 2 * Math.PI)
+                            ctx.lineWidth = 3
+                            ctx.strokeStyle = 'black'
+                            ctx.stroke()
+                        })
+
+                        // Parameter: scale of the circle relative to the wrapper (0 < scale ≤ 1)
+                        const flatlandCircleScale = 0.75
+
+                        // Helper: Calculate bearing from map center to city (in radians, 0 at top, clockwise)
+                        function lonLatToAngle(lon, lat, map) {
+                            const center = map.getCenter()
+                            const toRad = Math.PI / 180
+
+                            // Haversine bearing formula
+                            const phi1 = center.lat * toRad
+                            const phi2 = lat * toRad
+                            const lambda1 = center.lng * toRad
+                            const lambda2 = lon * toRad
+                            const y =
+                                Math.sin(lambda2 - lambda1) * Math.cos(phi2)
+                            const x =
+                                Math.cos(phi1) * Math.sin(phi2) -
+                                Math.sin(phi1) *
+                                    Math.cos(phi2) *
+                                    Math.cos(lambda2 - lambda1)
+                            let theta = Math.atan2(y, x) // radians, 0 = north
+                            return theta
+                        }
+
+                        // Draw cities as squares with labels on the circle
+                        function drawFlatlandCities(cityList) {
+                            const canvas =
+                                document.getElementById('flatland-circle')
+                            const wrapper = document.querySelector(
+                                '.flatland-map-wrapper'
+                            )
+                            canvas.width = wrapper.offsetWidth
+                            canvas.height = wrapper.offsetHeight
+                            const ctx = canvas.getContext('2d')
+                            const cx = canvas.width / 2
+                            const cy = canvas.height / 2
+                            // Use scale parameter for radius
+                            const radius =
+                                (Math.min(canvas.width, canvas.height) / 2 -
+                                    5) *
+                                flatlandCircleScale
+
+                            // Draw the circle
+                            ctx.clearRect(0, 0, canvas.width, canvas.height)
+                            ctx.beginPath()
+                            ctx.arc(cx, cy, radius, 0, 2 * Math.PI)
+                            ctx.lineWidth = 3
+                            ctx.strokeStyle = 'black'
+                            ctx.stroke()
+
+                            // --- Filter cities so only the largest in each neighborhood is drawn ---
+                            if (!cityList) return
+                            const minDist = 10 // px, minimum distance between markers
+
+                            // Precompute projected positions and sort by angle for efficient neighbor checks
+                            let projected = cityList
+                                .map((f) => {
+                                    const lon = parseFloat(f.Longitude)
+                                    const lat = parseFloat(f.Latitude)
+                                    const pop = parseInt(f.Population) || 0
+                                    if (isNaN(lon) || isNaN(lat)) return null
+                                    const angle = lonLatToAngle(lon, lat, map6)
+                                    const markerRadius = radius + 5
+                                    const px =
+                                        cx + markerRadius * Math.sin(angle)
+                                    const py =
+                                        cy - markerRadius * Math.cos(angle)
+                                    return {
+                                        ...f,
+                                        lon,
+                                        lat,
+                                        pop,
+                                        angle,
+                                        px,
+                                        py,
+                                    }
+                                })
+                                .filter(Boolean)
+                                .sort((a, b) => b.pop - a.pop)
+
+                            // Use a spatial hash to speed up proximity checks
+                            const gridSize = minDist
+                            const grid = new Map()
+                            const kept = []
+                            for (let i = 0; i < projected.length; ++i) {
+                                const a = projected[i]
+                                const gx = Math.floor(a.px / gridSize)
+                                const gy = Math.floor(a.py / gridSize)
+                                let tooClose = false
+                                // Only check nearby grid cells
+                                for (let dx = -1; dx <= 1 && !tooClose; ++dx) {
+                                    for (
+                                        let dy = -1;
+                                        dy <= 1 && !tooClose;
+                                        ++dy
+                                    ) {
+                                        const key = `${gx + dx},${gy + dy}`
+                                        if (grid.has(key)) {
+                                            for (const b of grid.get(key)) {
+                                                const dx2 = a.px - b.px
+                                                const dy2 = a.py - b.py
+                                                if (
+                                                    dx2 * dx2 + dy2 * dy2 <
+                                                    minDist * minDist
+                                                ) {
+                                                    tooClose = true
+                                                    break
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                if (!tooClose) {
+                                    kept.push(a)
+                                    const key = `${gx},${gy}`
+                                    if (!grid.has(key)) grid.set(key, [])
+                                    grid.get(key).push(a)
+                                }
+                            }
+
+                            // Draw each kept city
+                            ctx.font = '16px sans-serif'
+                            kept.forEach((f) => {
+                                // Draw square marker at the (outer) radius
+                                const size = 10
+                                ctx.save()
+                                ctx.translate(f.px, f.py)
+                                ctx.rotate(f.angle)
+                                ctx.fillStyle = 'black'
+                                ctx.fillRect(-size / 2, -size / 2, size, size)
+                                ctx.restore()
+
+                                // Draw label further outside the circle, radially aligned
+                                const labelRadius = radius + 20
+                                const labelX =
+                                    cx + labelRadius * Math.sin(f.angle)
+                                const labelY =
+                                    cy - labelRadius * Math.cos(f.angle)
+
+                                ctx.save()
+                                ctx.translate(labelX, labelY)
+                                ctx.rotate(f.angle - 90 * (Math.PI / 180))
+                                ctx.textAlign = 'left'
+                                ctx.textBaseline = 'middle'
+                                ctx.fillStyle = 'black'
+                                ctx.font = '14px sans-serif'
+                                ctx.fillText(f['Capital City'], 0, 0)
+                                ctx.restore()
+                            })
+                        }
+
+                        // Load CSV and draw cities
+                        let loadedCities = null
+                        function loadAndDrawCities() {
+                            Papa.parse(
+                                'data/country-capital-lat-long-population.csv',
+                                {
+                                    header: true,
+                                    download: true,
+                                    complete: function (results) {
+                                        loadedCities = results.data.filter(
+                                            (row) =>
+                                                row.Latitude && row.Longitude
+                                        )
+                                        drawFlatlandCities(loadedCities)
+                                    },
+                                }
+                            )
+                        }
+
+                        // Redraw on DOMContentLoaded, resize, and map move
+                        window.addEventListener(
+                            'DOMContentLoaded',
+                            loadAndDrawCities
+                        )
+                        window.addEventListener('resize', () =>
+                            drawFlatlandCities(loadedCities)
+                        )
+                        map6.on('move', () => drawFlatlandCities(loadedCities))
+
+                        // Toggle globe visibility
+                        document.addEventListener(
+                            'DOMContentLoaded',
+                            function () {
+                                const btn =
+                                    document.getElementById('toggle-globe')
+                                const mapDiv = document.getElementById('map6')
+                                let hidden = true
+                                btn.addEventListener('click', function () {
+                                    hidden = !hidden
+                                    mapDiv.style.opacity = hidden ? '0' : '1'
+                                    btn.textContent = hidden
+                                        ? 'Show Globe'
+                                        : 'Hide Globe'
+                                })
+
+                                // Download SVG functionality with white background and higher resolution
+                                const downloadBtn =
+                                    document.getElementById('download-svg')
+                                const canvas =
+                                    document.getElementById('flatland-circle')
+                                downloadBtn &&
+                                    downloadBtn.addEventListener(
+                                        'click',
+                                        function () {
+                                            // SVG export
+                                            const w = canvas.width
+                                            const h = canvas.height
+                                            // Get pixel data to find non-transparent bounds
+                                            const ctx = canvas.getContext('2d')
+                                            const imgData = ctx.getImageData(
+                                                0,
+                                                0,
+                                                w,
+                                                h
+                                            )
+                                            let minX = w,
+                                                minY = h,
+                                                maxX = 0,
+                                                maxY = 0
+                                            let found = false
+                                            for (let y = 0; y < h; ++y) {
+                                                for (let x = 0; x < w; ++x) {
+                                                    const idx = (y * w + x) * 4
+                                                    if (
+                                                        imgData.data[idx + 3] >
+                                                        0
+                                                    ) {
+                                                        found = true
+                                                        if (x < minX) minX = x
+                                                        if (x > maxX) maxX = x
+                                                        if (y < minY) minY = y
+                                                        if (y > maxY) maxY = y
+                                                    }
+                                                }
+                                            }
+                                            if (!found) return // nothing to export
+
+                                            // Add a small margin
+                                            const margin = 100
+                                            minX = minX - margin
+                                            minY = minY - margin
+                                            maxX = maxX + margin
+                                            maxY = maxY + margin
+
+                                            const outW = maxX - minX + 1
+                                            const outH = maxY - minY + 1
+
+                                            // Recompute the city positions and labels for SVG
+                                            // Use the same logic as drawFlatlandCities
+                                            const cx = w / 2
+                                            const cy = h / 2
+                                            const radius =
+                                                (Math.min(w, h) / 2 - 5) *
+                                                flatlandCircleScale
+
+                                            // Only use the filtered/kept cities
+                                            let cityList = loadedCities
+                                            if (!cityList) return
+                                            const minDist = 10
+                                            let projected = cityList
+                                                .map((f) => {
+                                                    const lon = parseFloat(
+                                                        f.Longitude
+                                                    )
+                                                    const lat = parseFloat(
+                                                        f.Latitude
+                                                    )
+                                                    const pop =
+                                                        parseInt(
+                                                            f.Population
+                                                        ) || 0
+                                                    if (
+                                                        isNaN(lon) ||
+                                                        isNaN(lat)
+                                                    )
+                                                        return null
+                                                    const angle = lonLatToAngle(
+                                                        lon,
+                                                        lat,
+                                                        map6
+                                                    )
+                                                    const markerRadius =
+                                                        radius + 5
+                                                    const px =
+                                                        cx +
+                                                        markerRadius *
+                                                            Math.sin(angle)
+                                                    const py =
+                                                        cy -
+                                                        markerRadius *
+                                                            Math.cos(angle)
+                                                    return {
+                                                        ...f,
+                                                        lon,
+                                                        lat,
+                                                        pop,
+                                                        angle,
+                                                        px,
+                                                        py,
+                                                    }
+                                                })
+                                                .filter(Boolean)
+                                                .sort((a, b) => b.pop - a.pop)
+
+                                            // Use a spatial hash to speed up proximity checks
+                                            const gridSize = minDist
+                                            const grid = new Map()
+                                            const kept = []
+                                            for (
+                                                let i = 0;
+                                                i < projected.length;
+                                                ++i
+                                            ) {
+                                                const a = projected[i]
+                                                const gx = Math.floor(
+                                                    a.px / gridSize
+                                                )
+                                                const gy = Math.floor(
+                                                    a.py / gridSize
+                                                )
+                                                let tooClose = false
+                                                for (
+                                                    let dx = -1;
+                                                    dx <= 1 && !tooClose;
+                                                    ++dx
+                                                ) {
+                                                    for (
+                                                        let dy = -1;
+                                                        dy <= 1 && !tooClose;
+                                                        ++dy
+                                                    ) {
+                                                        const key = `${
+                                                            gx + dx
+                                                        },${gy + dy}`
+                                                        if (grid.has(key)) {
+                                                            for (const b of grid.get(
+                                                                key
+                                                            )) {
+                                                                const dx2 =
+                                                                    a.px - b.px
+                                                                const dy2 =
+                                                                    a.py - b.py
+                                                                if (
+                                                                    dx2 * dx2 +
+                                                                        dy2 *
+                                                                            dy2 <
+                                                                    minDist *
+                                                                        minDist
+                                                                ) {
+                                                                    tooClose = true
+                                                                    break
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                if (!tooClose) {
+                                                    kept.push(a)
+                                                    const key = `${gx},${gy}`
+                                                    if (!grid.has(key))
+                                                        grid.set(key, [])
+                                                    grid.get(key).push(a)
+                                                }
+                                            }
+
+                                            // SVG header
+                                            let svg =
+                                                `<svg xmlns="http://www.w3.org/2000/svg" width="${outW}" height="${outH}" viewBox="${minX} ${minY} ${outW} ${outH}">\n` +
+                                                `<rect x="${minX}" y="${minY}" width="${outW}" height="${outH}" fill="#fff"/>\n`
+
+                                            // Draw the circle
+                                            svg += `<circle cx="${cx}" cy="${cy}" r="${radius}" stroke="black" stroke-width="3" fill="none"/>\n`
+
+                                            // Draw each kept city (squares and labels)
+                                            kept.forEach((f) => {
+                                                // Square marker
+                                                const size = 10
+                                                svg += `<rect x="${
+                                                    f.px - size / 2
+                                                }" y="${
+                                                    f.py - size / 2
+                                                }" width="${size}" height="${size}" fill="black" transform="rotate(${(
+                                                    (f.angle * 180) /
+                                                    Math.PI
+                                                ).toFixed(2)},${f.px},${
+                                                    f.py
+                                                })"/>\n`
+                                                // Label
+                                                const labelRadius = radius + 20
+                                                const labelX =
+                                                    cx +
+                                                    labelRadius *
+                                                        Math.sin(f.angle)
+                                                const labelY =
+                                                    cy -
+                                                    labelRadius *
+                                                        Math.cos(f.angle)
+                                                const rotate =
+                                                    (f.angle * 180) / Math.PI -
+                                                    90
+                                                svg += `<g transform="translate(${labelX},${labelY}) rotate(${rotate})"><text x="0" y="0" font-family="sans-serif" font-size="14" fill="black" text-anchor="start" alignment-baseline="middle">${String(
+                                                    f['Capital City']
+                                                ).replace(
+                                                    /[&<>"]/g,
+                                                    (c) =>
+                                                        ({
+                                                            '&': '&amp;',
+                                                            '<': '&lt;',
+                                                            '>': '&gt;',
+                                                            '"': '&quot;',
+                                                        }[c])
+                                                )}</text></g>\n`
+                                            })
+
+                                            svg += `</svg>`
+
+                                            // Download
+                                            const blob = new Blob([svg], {
+                                                type: 'image/svg+xml',
+                                            })
+                                            const link =
+                                                document.createElement('a')
+                                            link.download = 'flatland-map.svg'
+                                            link.href =
+                                                URL.createObjectURL(blob)
+                                            link.click()
+                                            setTimeout(() => {
+                                                URL.revokeObjectURL(link.href)
+                                            }, 1000)
+                                        }
+                                    )
+                            }
+                        )
+                    </script>
+                </section>
+            </main>
+        </div>
+    </body>
+    <style>
+        .flatland-map-wrapper {
+            position: relative;
+            width: 100%;
+            height: 500px;
+        }
+        #map6 {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #flatland-circle {
+            pointer-events: none;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: block;
+        }
+        #map-container {
+            position: relative;
+        }
+    </style>
+</html>

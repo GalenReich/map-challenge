@@ -52,6 +52,11 @@ img {
     margin-bottom: 20px;
     color: #555;
 }
+.caption a,
+.caption a:visited {
+    color: #555;
+    text-decoration: underline;
+}
 
 #legend {
     position: static;
