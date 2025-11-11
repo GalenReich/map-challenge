@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Day 7 - Drivable Neighbourhood | 30 Day Map Challenge</title>
+        <link rel="stylesheet" href="styles/main.css" />
+        <script src="https://unpkg.com/maplibre-gl@^5.10.0/dist/maplibre-gl.js"></script>
+        <script src=" https://cdn.jsdelivr.net/npm/papaparse@5.5.3/papaparse.min.js "></script>
+        <script defer src="scripts/header.js"></script>
+        <script defer src="scripts/nav.js"></script>
+        <link
+            href="https://unpkg.com/maplibre-gl@^5.10.0/dist/maplibre-gl.css"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div id="header"></div>
+        <div class="layout">
+            <nav id="navbar"></nav>
+            <main>
+                <section id="map-container">
+                    <h2>Day 7 - Accessibility</h2>
+                    <h3>Drivable Neighbourhood</h3>
+                    <p>
+                        A
+                        <a
+                            href="https://www.reddit.com/r/mildlyinteresting/comments/191kn3/it_takes_17_minutes_for_these_neighbors_to_drive/"
+                            >famous Reddit post</a
+                        >
+                        highlights the absurdity of neighbours sharing a fence
+                        but being nearly 12km away by car.
+                    </p>
+
+                    <div class="map" id="map7"></div>
+
+                    <script>
+                        var map7 = new maplibregl.Map({
+                            container: 'map7',
+                            style: 'styles/map/base.json',
+                            center: [-81.17287131201529, 28.539139781429345],
+                            zoom: 13,
+                        })
+
+                        map7.on('load', function () {
+                            // Load house_coords.geojson (points)
+                            fetch('data/house_coords.geojson')
+                                .then((response) => response.json())
+                                .then((houseCoordsData) => {
+                                    map7.addSource('house_coords', {
+                                        type: 'geojson',
+                                        data: houseCoordsData,
+                                    })
+                                    map7.addLayer({
+                                        id: 'house_coords_points',
+                                        type: 'circle',
+                                        source: 'house_coords',
+                                        paint: {
+                                            'circle-radius': 5,
+                                            'circle-color': '#000',
+                                        },
+                                    })
+                                })
+
+                            // Load house_drivable.geojson (lines)
+                            fetch('data/house_drivable.geojson')
+                                .then((response) => response.json())
+                                .then((houseDrivableData) => {
+                                    map7.addSource('house_drivable', {
+                                        type: 'geojson',
+                                        data: houseDrivableData,
+                                    })
+                                    map7.addLayer({
+                                        id: 'house_drivable_line',
+                                        type: 'line',
+                                        source: 'house_drivable',
+                                        paint: {
+                                            'line-width': 4,
+                                            'line-color': '#000',
+                                        },
+                                    })
+                                })
+                        })
+                    </script>
+                </section>
+            </main>
+        </div>
+    </body>
+</html>
